@@ -17,7 +17,6 @@ B站火花平台UP主数据抓取脚本（浏览器版）
 import asyncio
 import json
 import os
-import random
 import time
 from datetime import datetime
 
@@ -44,8 +43,8 @@ CDP_URL = "http://localhost:9222"
 SEARCH_URL = "https://huahuo.bilibili.com/commercialorder/api/web_api/v1/advertiser/upper_square/search"
 SEARCH_CT_ID = "XBhqj6L6Amz9L13roEtHN"
 
-# UP主详情页URL模板
-DETAIL_PAGE_URL = "https://huahuo.bilibili.com/#/upper/index/portrait?upper_mid={mid}"
+# UP主详情页URL模板（用mapping_id）
+DETAIL_PAGE_URL = "https://huahuo.bilibili.com/#/upper/page/{mapping_id}?referer=UpperContent"
 
 # 需要拦截的API路径
 INTERCEPT_APIS = {
@@ -56,12 +55,6 @@ INTERCEPT_APIS = {
 }
 
 PAGE_SIZE = 20
-# 请求间隔范围（秒）
-DELAY_MIN = 3.0
-DELAY_MAX = 6.0
-# 每N页休息一次
-REST_EVERY = 50
-REST_DURATION = 30
 # 每N个UP主保存一次断点
 SAVE_EVERY = 10
 # 验证码检测超时（秒）
@@ -87,11 +80,6 @@ def save_checkpoint_file(path: str, data: dict):
         json.dump(data, f, ensure_ascii=False)
     os.replace(tmp, path)
 
-
-def random_delay():
-    """随机延迟，模拟人类行为"""
-    delay = random.uniform(DELAY_MIN, DELAY_MAX)
-    time.sleep(delay)
 
 
 def print_banner(text: str):
@@ -232,8 +220,7 @@ async def phase1_fetch_list(context):
                 all_mids.append(item.get("upper_mid"))
         return {"page_results": page_results, "total_pages": total_pages, "all_mids": all_mids}
 
-    est_min = len(pages_to_fetch) * (DELAY_MIN + DELAY_MAX) / 2 / 60
-    print(f"预计耗时: ~{est_min:.0f} 分钟\n")
+    print(f"共 {len(pages_to_fetch)} 页待抓取\n")
 
     pbar = tqdm(total=len(pages_to_fetch), desc="阶段一-列表", unit="页",
                 bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}]")
@@ -273,12 +260,6 @@ async def phase1_fetch_list(context):
                 "page_data": {str(k): v for k, v in page_results.items()},
             })
 
-        # 定期休息
-        if (i + 1) % REST_EVERY == 0 and (i + 1) < len(pages_to_fetch):
-            tqdm.write(f"  休息 {REST_DURATION}s 防限流...")
-            await asyncio.sleep(REST_DURATION)
-        elif (i + 1) < len(pages_to_fetch):
-            await asyncio.sleep(random.uniform(DELAY_MIN, DELAY_MAX))
 
     pbar.close()
     await page.close()
@@ -301,26 +282,27 @@ async def phase1_fetch_list(context):
 
 # ============ 阶段二：抓取UP主详情 ============
 
-async def phase2_fetch_details(context, all_mids: list):
-    """阶段二：逐个访问UP主详情页，拦截API响应"""
+async def phase2_fetch_details(context, all_uppers: list):
+    """阶段二：逐个访问UP主详情页，拦截API响应
+    all_uppers: [(upper_mid, mapping_id), ...] 的列表
+    """
     print_banner("阶段二：抓取UP主详情")
 
     # 加载断点
     ckpt = load_checkpoint(PHASE2_CHECKPOINT)
     detail_results = ckpt.get("detail_data", {})
-    completed_mids = set(int(m) for m in detail_results.keys())
+    completed_mids = set(detail_results.keys())
 
-    mids_to_fetch = [m for m in all_mids if m not in completed_mids]
-    print(f"总计: {len(all_mids)} 个UP主")
+    uppers_to_fetch = [(mid, mid2) for mid, mid2 in all_uppers if str(mid) not in completed_mids]
+    print(f"总计: {len(all_uppers)} 个UP主")
     print(f"已完成: {len(completed_mids)}")
-    print(f"本次需抓取: {len(mids_to_fetch)}")
+    print(f"本次需抓取: {len(uppers_to_fetch)}")
 
-    if not mids_to_fetch:
+    if not uppers_to_fetch:
         print("所有UP主详情已抓取完成")
         return detail_results
 
-    est_min = len(mids_to_fetch) * (DELAY_MIN + DELAY_MAX) / 2 / 60
-    print(f"预计耗时: ~{est_min:.0f} 分钟\n")
+    print(f"共 {len(uppers_to_fetch)} 个UP主待抓取\n")
 
     page = await context.new_page()
 
@@ -352,14 +334,17 @@ async def phase2_fetch_details(context, all_mids: list):
 
     page.on("response", handle_response)
 
-    pbar = tqdm(total=len(mids_to_fetch), desc="阶段二-详情", unit="人",
+    pbar = tqdm(total=len(uppers_to_fetch), desc="阶段二-详情", unit="人",
                 bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}]")
 
-    for i, mid in enumerate(mids_to_fetch):
+    for i, (mid, mapping_id) in enumerate(uppers_to_fetch):
         captured.clear()
-        detail_url = DETAIL_PAGE_URL.format(mid=mid)
+        detail_url = DETAIL_PAGE_URL.format(mapping_id=mapping_id)
 
         try:
+            # 先跳空白页，强制SPA完整重新加载
+            await page.goto("about:blank", wait_until="load", timeout=5000)
+            await asyncio.sleep(0.5)
             await page.goto(detail_url, wait_until="networkidle", timeout=30000)
             # 等待页面数据加载
             await asyncio.sleep(2)
@@ -376,9 +361,10 @@ async def phase2_fetch_details(context, all_mids: list):
             resolved = await wait_for_captcha_resolve(page, context)
             if not resolved:
                 break
-            # 重新注册事件监听（页面可能重新加载了）
             captured.clear()
             try:
+                await page.goto("about:blank", wait_until="load", timeout=5000)
+                await asyncio.sleep(0.5)
                 await page.goto(detail_url, wait_until="networkidle", timeout=30000)
                 await asyncio.sleep(2)
             except Exception:
@@ -399,12 +385,6 @@ async def phase2_fetch_details(context, all_mids: list):
                 "detail_data": detail_results,
             })
 
-        # 定期休息
-        if (i + 1) % REST_EVERY == 0 and (i + 1) < len(mids_to_fetch):
-            tqdm.write(f"  休息 {REST_DURATION}s 防限流...")
-            await asyncio.sleep(REST_DURATION)
-        elif (i + 1) < len(mids_to_fetch):
-            await asyncio.sleep(random.uniform(DELAY_MIN, DELAY_MAX))
 
     pbar.close()
     await page.close()
@@ -595,7 +575,7 @@ def build_row(search_item: dict, detail: dict) -> dict:
     # ---- 链接 ----
     row["头像URL"] = search_item.get("head_img", "")
     row["B站主页"] = f"https://space.bilibili.com/{search_item.get('upper_mid', '')}"
-    row["火花主页"] = DETAIL_PAGE_URL.format(mid=search_item.get("upper_mid", ""))
+    row["火花主页"] = DETAIL_PAGE_URL.format(mapping_id=search_item.get("mapping_id", ""))
 
     return row
 
@@ -782,16 +762,16 @@ async def main():
                     print("\n错误: 请先执行步骤1抓取UP主列表\n")
                     continue
 
-                # 汇总所有mid
-                all_mids = []
+                # 汇总所有 (upper_mid, mapping_id) 配对
+                all_uppers = []
                 for pg in sorted(ckpt1["page_data"].keys(), key=int):
                     for item in ckpt1["page_data"][pg]:
-                        all_mids.append(item.get("upper_mid"))
+                        all_uppers.append((item.get("upper_mid"), item.get("mapping_id")))
 
                 ckpt2 = load_checkpoint(PHASE2_CHECKPOINT)
                 done_count = len(ckpt2.get("detail_data", {}))
 
-                print(f"\n共 {len(all_mids)} 个UP主，已完成详情: {done_count}")
+                print(f"\n共 {len(all_uppers)} 个UP主，已完成详情: {done_count}")
                 print("  输入 y 或回车 — 抓取全部")
                 print("  输入 数字N — 只抓取前N个")
                 print("  输入 n — 取消")
@@ -801,9 +781,9 @@ async def main():
                     continue
                 elif sub.isdigit():
                     n = int(sub)
-                    await phase2_fetch_details(context, all_mids[:n])
+                    await phase2_fetch_details(context, all_uppers[:n])
                 else:
-                    await phase2_fetch_details(context, all_mids)
+                    await phase2_fetch_details(context, all_uppers)
 
             elif choice == "3":
                 # 导出Excel
