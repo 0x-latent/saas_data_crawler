@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+checkpoints/
+checkpoint.json
+checkpoint.json.tmp
+*.xlsx
+config.yaml
+start_chrome.bat
