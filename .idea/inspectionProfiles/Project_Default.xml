@@ -1,0 +1,44 @@
+<component name="InspectionProjectProfileManager">
+  <profile version="1.0">
+    <option name="myName" value="Project Default" />
+    <inspection_tool class="Eslint" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="PyPackageRequirementsInspection" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="ignoredPackages">
+        <list>
+          <option value="fastapi" />
+          <option value="uvicorn" />
+          <option value="python-multipart" />
+          <option value="pydantic" />
+          <option value="pydantic-settings" />
+          <option value="pyyaml" />
+          <option value="python-dotenv" />
+          <option value="faster-whisper" />
+          <option value="openai" />
+          <option value="httpx" />
+          <option value="sqlalchemy" />
+          <option value="aiofiles" />
+          <option value="jinja2" />
+          <option value="openpyxl" />
+          <option value="xlrd" />
+          <option value="pandas" />
+          <option value="numpy" />
+          <option value="scikit-learn" />
+          <option value="joblib" />
+          <option value="graphviz" />
+          <option value="jieba" />
+          <option value="umap-learn" />
+          <option value="hdbscan" />
+          <option value="tencentcloud-sdk-python-hunyuan" />
+        </list>
+      </option>
+    </inspection_tool>
+    <inspection_tool class="PyUnresolvedReferencesInspection" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="ignoredIdentifiers">
+        <list>
+          <option value="portalocker" />
+        </list>
+      </option>
+    </inspection_tool>
+    <inspection_tool class="SqlNoDataSourceInspection" enabled="true" level="INFORMATION" enabled_by_default="true" />
+  </profile>
+</component>
