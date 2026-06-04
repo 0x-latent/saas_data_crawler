@@ -3,6 +3,7 @@
 __pycache__/
 *.pyc
 checkpoints/
+data/
 checkpoint.json
 checkpoint.json.tmp
 *.xlsx

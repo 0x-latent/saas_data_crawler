@@ -24,6 +24,18 @@ PLATFORMS: dict[str, Platform] = {
         script="scripts/feigua_scraper.py",
         description="飞瓜平台 B站 UP 主和 MCN 数据采集",
     ),
+    "ks_feigua": Platform(
+        key="ks_feigua",
+        name="飞瓜快手",
+        script="scripts/ks_feigua_scraper.py",
+        description="飞瓜快手达人搜索、达人详情概览、直播/视频/带货/粉丝趋势数据采集",
+    ),
+    "magnetic_juxing": Platform(
+        key="magnetic_juxing",
+        name="磁力聚星",
+        script="scripts/magnetic_juxing_scraper.py",
+        description="磁力聚星热点榜单达人数据采集，支持首页榜单、完整热点榜单和接口探测",
+    ),
 }
 
 

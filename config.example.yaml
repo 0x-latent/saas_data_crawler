@@ -6,3 +6,20 @@ cookies:
 
 feigua_cookies:
   - "your_feigua_cookie_here"
+
+ks_feigua_cookies:
+  - "your_ks_feigua_cookie_here"
+
+magnetic_juxing_cookies:
+  - "your_magnetic_juxing_cookie_here"
+
+# Only needed when calling one detail manually with --action detail/all.
+# Full scrape reads each blogger's timestamp/signature from BloggerJumpUrl.
+ks_feigua:
+  timestamp: ""
+  signature: ""
+
+magnetic_juxing:
+  # ACCOUNT-ID header selected by the UC account interceptor.
+  # If omitted, scripts/magnetic_juxing_scraper.py defaults to the first observed account id.
+  account_id: ""
