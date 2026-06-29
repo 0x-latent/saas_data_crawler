@@ -1,6 +1,6 @@
 # 架构说明
 
-这个项目定位为垂直 SaaS 数据采集工具，当前已接入火花和飞瓜两个 B 站商业数据平台。
+这个项目定位为垂直 SaaS 数据采集工具，已接入 4 个平台、覆盖 B 站和快手：火花（B 站官方）、飞瓜·B 站、飞瓜·快手、磁力聚星（快手官方）。
 
 ## 分层
 
@@ -16,11 +16,14 @@ saas_crawler/
 └── cli.py              # 项目级 CLI
 
 scripts/
-├── scraper.py          # 火花 API 采集
-├── scraper_browser.py  # 火花浏览器详情采集
-├── feigua_scraper.py   # 飞瓜采集
-├── merge_data.py       # 火花 + 飞瓜数据合并
-└── windows/            # Windows 辅助脚本
+├── scraper.py                    # 火花 API 采集
+├── scraper_browser.py            # 火花浏览器详情采集
+├── feigua_scraper.py             # 飞瓜·B 站采集
+├── merge_data.py                 # 火花 + 飞瓜数据合并
+├── ks_feigua_scraper.py          # 飞瓜·快手采集
+├── ks_feigua_build_dashboard.py  # 飞瓜·快手 Mart / 看板生成
+├── magnetic_juxing_scraper.py    # 磁力聚星采集（SQLite 工作流）
+└── windows/                      # Windows 辅助脚本
 ```
 
 ## 接入新平台的建议流程
@@ -33,6 +36,6 @@ scripts/
 
 ## 当前边界
 
-- 火花和飞瓜的业务采集逻辑仍保留在现有脚本中，以降低稳定采集流程的回归风险。
+- 各平台（火花、飞瓜·B 站、飞瓜·快手、磁力聚星）的业务采集逻辑仍保留在现有脚本中，以降低稳定采集流程的回归风险。
 - 公共能力已经下沉到 `saas_crawler.core`，后续新增平台时应优先复用这些模块。
 - CLI 当前用于项目发现，真正采集入口仍保持脚本形式，便于沿用现有运行方式。

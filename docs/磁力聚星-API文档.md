@@ -30,14 +30,19 @@ Referer: https://k.kuaishou.com/
 ACCOUNT-ID: <账号主体 ID>
 ```
 
-本次 209 响应中观察到两个账号主体：
+本次 209 响应中观察到该 `userId`（5174709324）名下有两个广告主账户（`accountId`）：
 
-| accountId | accountName | reviewStatus |
-|---:|---|---:|
-| 112250379 | 快手用户1764579652423 | 0 |
-| 90363030 | 三九胃泰 | 2 |
+| accountId | accountName | reviewStatus | 说明 |
+|---:|---|---:|---|
+| 112250379 | 快手用户1764579652423 | 0 | 未实名/未审核；详情接口会报"营业执照查询失败，请重新登陆" |
+| 90363030 | 三九胃泰 | 2 | 已实名/已审核；详情接口可正常返回，**应使用此账户** |
 
-脚本默认使用 `112250379`，可在 `config.yaml` 的 `magnetic_juxing.account_id` 或命令行 `--account-id` 覆盖。
+`ACCOUNT-ID` 选择要点（2026-06-16 复核确认）：
+
+- `ACCOUNT-ID` 必须填 `accountId`（如 `90363030`），**不是** Cookie 里的 `userId`/`bUserId`；填成 userId/bUserId 会返回 `result=209`，响应中的 `accountInfos[]` 会列出该用户名下所有可选 `accountId` 供你挑选正确值。
+- 脚本内置默认 `112250379` 恰好是**未实名**账户，会导致 `baseInfo` 等详情接口返回 `result=-1`、`error_msg=营业执照查询失败，请重新登陆`。而列表/榜单接口（`star/list`）对 `ACCOUNT-ID` 校验较松、用未实名账户也能返回数据——因此会出现"列表/榜单能抓、详情全部失败"的典型现象。
+- 已在 `config.yaml` 配置 `magnetic_juxing.account_id: "90363030"`，默认即走正确账户，无需再手动传 `--account-id`。
+- 若在磁力聚星后台切换了当前账户导致再次报"营业执照查询失败"，把该配置改成对应 `accountId` 即可（或临时用 `--account-id` 覆盖）。
 
 ## 已验证接口
 
@@ -445,19 +450,73 @@ POST /rest/web/post/video/works/statistics/get
 .\.venv\Scripts\python.exe -m scripts.magnetic_juxing_scraper --action interactive --account-id 90363030
 ```
 
-交互菜单会提供：
+交互工作台会提供：
 
-1. `smoke test`: 5 页直播榜 + 全部热点榜 + 100 个详情。
-2. `daily discovery`: 50 页直播榜 + 全部热点榜，不抓详情。
-3. `daily detail batch`: 20 页直播榜 + 全部热点榜 + 200 个详情。
-4. `large batch`: 100 页直播榜 + 全部热点榜 + 500 个详情。
-5. `deep discovery only`: 250 页直播榜 + 全部热点榜，不抓详情。
-6. `custom`: 手动输入榜单、页数、详情数量和刷新间隔。
+1. `小批试跑`: 5 页达人榜 + 5 页直播榜 + 最多 20 个详情，用于验证账号和接口。
+2. `全量发现达人`: 250 页达人榜 + 250 页直播榜，跳过详情；已抓分页会自动跳过。
+3. `补采达人详情页`: 基于 SQLite 已有达人池补 `baseInfo`、代表作品、粉丝/观众画像。
+4. `查看数据库状态`: 打印各表/视图行数，确认当前采集进度。
+5. `导出 CSV`: 从 SQLite 视图导出达人总览、来源、作品、画像等 CSV。
+6. `自定义采集`: 手动设置是否跑热点榜、是否跳过某类列表、页数、详情数量和刷新间隔。
+
+`/rest/web/hot/star/list` 如果持续返回“网络繁忙”，优先使用默认菜单跳过热点榜；只在 custom 里明确选择不跳过时才测试热点榜。
 
 也可以直接传参数运行：
 
 ```powershell
 .\.venv\Scripts\python.exe -m scripts.magnetic_juxing_scraper --action full --account-id 90363030 --hot-ranks all --max-pages 1 --detail-limit 50
+```
+
+跳过热点榜的直接命令：
+
+```powershell
+.\.venv\Scripts\python.exe -m scripts.magnetic_juxing_scraper --action full --account-id 90363030 --skip-hot-ranks --max-pages 50 --skip-details
+```
+
+这条命令会同时抓：
+
+- `source_type = 'star-list'`: 达人列表 / 达人榜，默认页数跟随 `--max-pages`，也可以用 `--star-max-pages` 单独控制。
+- `source_type = 'live-list'`: 直播达人榜，页数由 `--max-pages` 控制。
+
+默认会按 `source_type + account_id + page payload` 跳过 SQLite 中已存在的分页；如果中途失败，修复后重复运行同一命令即可继续补未抓分页。需要强制重抓时再加 `--no-skip-existing-pages`。
+
+如果只想抓达人列表 / 达人榜：
+
+```powershell
+.\.venv\Scripts\python.exe -m scripts.magnetic_juxing_scraper --action full --account-id 90363030 --skip-hot-ranks --skip-live-list --skip-details --star-max-pages 50
+```
+
+如果只想抓直播达人榜：
+
+```powershell
+.\.venv\Scripts\python.exe -m scripts.magnetic_juxing_scraper --action full --account-id 90363030 --skip-hot-ranks --skip-star-list --skip-details --max-pages 50
+```
+
+只补采详情页：
+
+```powershell
+.\.venv\Scripts\python.exe -m scripts.magnetic_juxing_scraper --action full --account-id 90363030 --skip-hot-ranks --skip-star-list --skip-live-list --detail-limit 200
+```
+
+导出常用 CSV：
+
+```powershell
+.\.venv\Scripts\python.exe -m scripts.magnetic_juxing_scraper --action export-csv --export-group core
+```
+
+`core` 会额外导出两个榜单明细展开表：
+
+- `达人榜明细.csv`: 达人列表 / 达人榜明细，展开 `fact_star_source.item_json` 的顶层字段。
+- `直播达人榜明细.csv`: 直播达人榜明细，展开 `fact_star_source.item_json` 的顶层字段。
+
+这两个文件字段最丰富，适合分析榜单数据；`v_star_overview.csv` 只是达人概览。
+
+CSV 导出默认使用中文文件名和中文字段名；SQLite 内部表名仍保留英文，保证程序兼容和增量写入稳定。
+
+导出目录形如：
+
+```text
+data/magnetic_juxing_export_YYYYMMDD_HHMMSS/
 ```
 
 默认输出：

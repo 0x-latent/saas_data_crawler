@@ -1,6 +1,17 @@
 # saas_data_crawler
 
-面向火花、飞瓜等垂直 SaaS 数据库的 B 站 UP 主数据采集项目。当前保留稳定脚本入口，同时把路径、配置、断点和导出等公共能力抽到 `saas_crawler` 包中，方便后续接入更多类似平台。
+面向火花、飞瓜、磁力聚星等垂直 SaaS 数据平台的达人数据采集项目，覆盖 B 站和快手。当前保留稳定脚本入口，同时把路径、配置、断点和导出等公共能力抽到 `saas_crawler` 包中，方便后续接入更多类似平台。
+
+## 已接入平台
+
+| 平台 | 渠道 | 采集脚本 | API 文档 |
+|---|---|---|---|
+| 火花 | B 站官方商业平台 | `scripts/scraper.py`、`scripts/scraper_browser.py` | [火花-API文档](docs/火花-API文档.md) |
+| 飞瓜·B 站 | 第三方数据平台 | `scripts/feigua_scraper.py` | [飞瓜B站-API文档](docs/飞瓜B站-API文档.md) |
+| 飞瓜·快手 | 第三方数据平台 | `scripts/ks_feigua_scraper.py`、`scripts/ks_feigua_build_dashboard.py` | [飞瓜快手-API文档](docs/飞瓜快手-API文档.md) |
+| 磁力聚星 | 快手官方商业平台 | `scripts/magnetic_juxing_scraper.py` | [磁力聚星-API文档](docs/磁力聚星-API文档.md) |
+
+火花 + 飞瓜数据合并：`scripts/merge_data.py`。完整文档导航见 [docs/README.md](docs/README.md)。
 
 ## 目录结构
 
@@ -25,11 +36,26 @@
 .venv\Scripts\pip.exe install -r requirements.txt
 ```
 
+火花 / 飞瓜 B 站：
+
 ```powershell
 .venv\Scripts\python.exe scripts\scraper.py
 .venv\Scripts\python.exe scripts\scraper_browser.py
 .venv\Scripts\python.exe scripts\feigua_scraper.py
 .venv\Scripts\python.exe scripts\merge_data.py
+```
+
+飞瓜快手（采集 + 生成看板）：
+
+```powershell
+.venv\Scripts\python.exe -m scripts.ks_feigua_scraper --action full
+.venv\Scripts\python.exe -m scripts.ks_feigua_build_dashboard
+```
+
+磁力聚星（交互式工作台，账户已在 config.yaml 配置，无需带 --account-id）：
+
+```powershell
+.venv\Scripts\python.exe -m scripts.magnetic_juxing_scraper --action interactive
 ```
 
 查看已注册平台：
