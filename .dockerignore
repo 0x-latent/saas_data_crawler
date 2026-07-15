@@ -1,0 +1,11 @@
+.git
+.idea
+.venv
+.npm-cache
+__pycache__
+*.pyc
+data
+checkpoints
+frontend/node_modules
+frontend/dist
+config.yaml

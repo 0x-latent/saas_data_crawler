@@ -8,4 +8,8 @@ checkpoint.json
 checkpoint.json.tmp
 *.xlsx
 config.yaml
+.env
 start_chrome.bat
+.npm-cache/
+frontend/node_modules/
+frontend/dist/
