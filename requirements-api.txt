@@ -1,5 +1,4 @@
 openpyxl>=3.1
-playwright==1.61.0
 PyYAML>=6.0
 requests>=2.31
 tqdm>=4.66
