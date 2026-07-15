@@ -13,6 +13,9 @@ ks_feigua_cookies:
 magnetic_juxing_cookies:
   - "your_magnetic_juxing_cookie_here"
 
+xingtu_cookies:
+  - "your_xingtu_cookie_here"
+
 # Only needed when calling one detail manually with --action detail/all.
 # Full scrape reads each blogger's timestamp/signature from BloggerJumpUrl.
 ks_feigua:

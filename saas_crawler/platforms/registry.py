@@ -36,6 +36,12 @@ PLATFORMS: dict[str, Platform] = {
         script="scripts/magnetic_juxing_scraper.py",
         description="磁力聚星热点榜单达人数据采集，支持首页榜单、完整热点榜单和接口探测",
     ),
+    "xingtu": Platform(
+        key="xingtu",
+        name="星图",
+        script="scripts/xingtu_scraper.py",
+        description="星图达人市场 search_for_author_square 浏览器探测与响应结构采集",
+    ),
 }
 
 
